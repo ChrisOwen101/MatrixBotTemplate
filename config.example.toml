@@ -1,0 +1,11 @@
+[bot]
+# Your homeserver URL (no trailing slash)
+homeserver = "https://your_domain.com"
+# The full user id of the bot
+user_id = "@yourbot:matrix.org"
+# Optional: device id label
+device_id = "DEV1"
+# Optional: display name to set when starting
+# display_name = "Echo Bot"
+# Logging level (DEBUG, INFO, WARNING, ERROR)
+log_level = "DEBUG"
