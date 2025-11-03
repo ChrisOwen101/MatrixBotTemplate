@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Lightweight Matrix echo-style bot using `matrix-nio`. The bot logs in with an access token, listens for text messages in allowed rooms, and replies based on simple command logic. Architecture prioritizes clarity, small surface area, and testable pure logic.
+**The Architect** - A self-modifying Matrix bot using `matrix-nio` and Claude AI. The bot can dynamically generate and add new commands to itself using natural language descriptions. Users send `/add -n <name> -d "<description>"` and the bot generates code, validates it, saves it, commits to git, and restarts to load the new command. Architecture prioritizes safety, modularity, and extensibility.
 
 ## Development Commands
 
@@ -19,7 +19,9 @@ pip install -r requirements.txt
 
 # Copy example config and edit
 cp config.example.toml config.toml
-# Create .env file with: MATRIX_ACCESS_TOKEN="syt_xxx"
+# Create .env file with both tokens:
+# MATRIX_ACCESS_TOKEN="syt_xxx"
+# ANTHROPIC_API_KEY="sk-ant-xxx"
 ```
 
 ### Running
@@ -46,67 +48,138 @@ pytest tests/test_handlers.py -v
 
 **bot/config.py** - Configuration management
 - Loads and validates `config.toml` using `tomllib` (Python 3.11+) or `tomli` fallback
-- Exposes `BotConfig.access_token` from environment via `MATRIX_ACCESS_TOKEN` (loaded from `.env`)
+- Exposes `BotConfig.access_token` and `BotConfig.anthropic_api_key` from environment (loaded from `.env`)
 - Fails fast if required config keys are missing
-- Config keys: `homeserver`, `user_id`, `device_id`, `display_name`, `log_level`
+- Config keys: `homeserver`, `user_id`, `device_id`, `display_name`, `log_level`, `allowed_rooms`, `enable_auto_commit`
 
-**bot/handlers.py** - Message handling and reply logic
-- `generate_reply(body: str) -> str | None`: Pure function containing all reply logic. Returns None to skip sending a reply.
+**bot/commands/__init__.py** - Dynamic command registry system
+- `CommandRegistry`: Manages command registration and execution
+- `@command` decorator: Registers commands with name, description, and regex pattern
+- `load_commands()`: Auto-discovers and loads all `.py` files in `bot/commands/`
+- `execute_command(body)`: Matches message against patterns and executes handler
+
+**bot/handlers.py** - Message handling
+- `generate_reply(body)`: Now delegates to command registry via `execute_command()`
 - `on_message(client, room, event)`: Event handler that filters messages and sends replies
-- Timestamp filtering: Ignores historical events with `server_timestamp < START_TIME_MS - HISTORICAL_SKEW_MS` (5s skew allowance) to avoid replying to old messages on first sync
-- Room filtering: Hard-coded `ALLOWED_ROOMS` list currently checks if `room.room_id` is in the list
+- Timestamp filtering: Ignores historical events with `server_timestamp < START_TIME_MS - HISTORICAL_SKEW_MS` (5s skew)
+- Room filtering: Uses `_config.allowed_rooms` from config.toml (set via `set_config()`)
 
 **bot/main.py** - Bot lifecycle and Matrix client
-- Bootstraps bot: loads config, creates `AsyncClient`, registers event callbacks
-- `login_if_needed()`: Injects pre-issued access token (no password login). Manually sets `client.user_id` since nio doesn't populate it when using token injection.
+- Bootstraps bot: loads config, calls `set_config()`, creates `AsyncClient`, registers event callbacks
+- `login_if_needed()`: Injects pre-issued access token (no password login). Manually sets `client.user_id` at bot/main.py:42
 - Sync loop with basic retry (5s sleep on exception)
 - Signal handlers for graceful shutdown on SIGINT/SIGTERM (sets `STOP` event)
 
+**bot/claude_integration.py** - Claude API client
+- `generate_command_code()`: Calls Claude API to generate command code and tests
+- Retry logic: Up to 3 attempts with exponential backoff
+- Strips markdown code blocks from responses
+- Returns tuple: (command_code, test_code, error_message)
+
+**bot/code_validator.py** - Code safety validation
+- `validate_command_code()`: AST parsing, dangerous operation detection, structure validation
+- Blocks dangerous imports: `subprocess`, `os.system`, `eval`, `exec`, `open`
+- Verifies required handler function structure and @command decorator
+- `validate_test_code()`: Basic syntax and compilation checks for tests
+
+**bot/git_integration.py** - Git operations
+- `git_commit()`: Stages files and commits with message
+- `git_remove()`: Removes files from git and commits
+- Uses subprocess to call git commands
+- Returns (success, error_message) tuple
+
+**bot/reload.py** - Bot restart mechanism
+- `restart_bot()`: Uses `os.execv()` to replace process with fresh instance
+- Maintains same PID and arguments
+- Called after successful command add/remove operations
+
 ### Key Architectural Decisions
 
-1. **Pure reply logic**: `generate_reply` is pure (no I/O) to keep it testable. Keep responses under ~4000 chars.
+1. **Dynamic command system**: Commands are individual Python modules in `bot/commands/`. Each uses `@command` decorator for registration. Registry auto-loads on startup.
 
-2. **Token injection pattern**: Uses pre-issued access token rather than password login. The `client.user_id` must be set manually when injecting tokens (handled in `login_if_needed` at bot/main.py:42).
+2. **Self-modifying capability**: `/add` command uses Claude API to generate new command code. Code is validated, saved, committed to git, and bot restarts to load it.
 
-3. **Historical event filtering**: Uses bot start time (`START_TIME_MS`) to filter old messages during initial sync, preventing replies to historical messages.
+3. **Safety-first validation**: All generated code goes through AST parsing, dangerous operation detection, and compilation checks before execution.
 
-4. **Room allowlist**: Currently uses hard-coded room ID list in `ALLOWED_ROOMS` (bot/handlers.py:13). When extending, consider moving to config.
+4. **Git integration**: All code changes are automatically committed (if `enable_auto_commit` is true) for version control and rollback capability.
+
+5. **Process restart over hot reload**: Bot uses `os.execv()` for clean restart rather than module reloading to avoid stale state issues.
+
+6. **Token injection pattern**: Uses pre-issued access tokens (Matrix + Anthropic) rather than password login. The `client.user_id` must be set manually when injecting tokens (handled in `login_if_needed` at bot/main.py:42).
+
+7. **Historical event filtering**: Uses bot start time (`START_TIME_MS`) to filter old messages during initial sync, preventing replies to historical messages.
+
+8. **Config-based room allowlist**: Room filtering now uses `allowed_rooms` from config.toml rather than hardcoded values.
 
 ## Development Patterns
 
-### Adding New Commands
-Extend `generate_reply` in `bot/handlers.py`. Keep logic pure and return None when no reply is needed:
-```python
-async def generate_reply(body: str) -> str | None:
-    body_lower = body.strip().lower()
-    if body_lower.startswith("!mycommand"):
-        return "My response"
-    # ... existing logic
+### Adding New Commands (Two Methods)
+
+**Method 1: Using /add (recommended for bot users)**
 ```
-Add corresponding tests in `tests/test_handlers.py`.
+/add -n mycommand -d "Description of what the command does"
+```
+The bot will generate, validate, and install the command automatically.
+
+**Method 2: Manual creation (for developers)**
+Create `bot/commands/mycommand.py`:
+```python
+from __future__ import annotations
+from typing import Optional
+from . import command
+
+@command(
+    name="mycommand",
+    description="What this command does",
+    pattern=r"^/mycommand\s*(.*)$"
+)
+async def mycommand_handler(body: str) -> Optional[str]:
+    """Implementation here."""
+    # Parse body, perform logic
+    return "Response"
+```
+Add tests in `tests/commands/test_mycommand.py`. Restart bot to load.
 
 ### Testing Patterns
-- Use lightweight dummy classes rather than heavy mocking frameworks (see existing tests)
+- Use pytest with pytest-asyncio for async tests
+- Test command handlers directly by importing and calling them
 - Test both happy paths and edge cases (especially None returns)
-- When changing timestamp or room filtering logic, update corresponding tests
+- Command tests go in `tests/commands/test_<name>.py`
+- Core system tests in `tests/test_*.py`
 
 ### Security
-- Never log or print the access token
-- All secrets must be loaded from environment variables (via `.env` file)
-- Access token not set → `BotConfig.access_token` raises `RuntimeError` before any network calls
+- **Never log or print API keys**: Both Matrix and Anthropic tokens are sensitive
+- **All secrets from environment**: Load via `.env` file, never hardcode
+- **Code validation**: All generated code goes through AST validation to block dangerous operations
+- **Protected commands**: Core meta-commands (add, remove, list) cannot be removed
+- **Git tracking**: All code changes are version controlled for audit trail
 
 ### Extension Points
-- **New commands**: Modify `generate_reply`; consider command registry pattern only when it grows significantly
-- **Room allowlist**: Move `ALLOWED_ROOMS` to config.toml as `allowed_rooms: list[str]`
-- **Retry/backoff**: Wrap `client.sync` with exponential backoff (ensure cancellation respects `STOP` event)
+- **Command permissions**: Add user-based permission checks in meta-commands (currently anyone in allowed rooms can add/remove)
+- **Command categories**: Extend registry to support command grouping/categories
+- **Rate limiting**: Add rate limits on /add to prevent API abuse
+- **Command versioning**: Track command versions in registry for rollback capability
 - **Persistence**: Add `SqliteStore` to persist sync tokens and avoid processing missed events
+- **Approval workflow**: Add manual approval step before executing generated code
 
 ## Important Gotchas
 
 1. **Manual user_id assignment**: When injecting access token, must manually set `client.user_id` (see bot/main.py:42). The nio library doesn't populate this automatically.
 
-2. **Hard-coded room filter**: Current `ALLOWED_ROOMS` filter prevents spam but limits functionality. Changing without updating tests may cause unintended behavior.
+2. **Bot restart required**: After adding/removing commands, bot must restart to load changes. This is handled automatically but means brief downtime.
 
-3. **Timestamp filtering**: The `START_TIME_MS` and `HISTORICAL_SKEW_MS` constants prevent historical replies. Modifying these affects first-sync behavior.
+3. **Command name collisions**: If a command already exists, `/add` will fail. Use `/remove` first to replace.
 
-4. **Backward compatibility**: Maintain test compatibility when altering filtering or room logic.
+4. **Delayed restart**: Commands use `asyncio.create_task(_delayed_restart())` to allow response message to send before restarting (2 second delay).
+
+5. **Timestamp filtering**: The `START_TIME_MS` and `HISTORICAL_SKEW_MS` constants prevent historical replies. Modifying these affects first-sync behavior.
+
+6. **Code validation limitations**: AST validation catches many issues but can't detect all malicious code patterns. Review generated code in production.
+
+7. **Git must be initialized**: Auto-commit feature requires the directory to be a git repository with proper remote setup.
+
+8. **Test generation**: Tests are auto-generated but may not be comprehensive. Review and enhance them as needed.
+
+9. **API rate limits**: Claude API has rate limits. High-frequency `/add` usage could hit limits.
+
+10. **Command loading order**: Commands are loaded alphabetically by filename. If order matters, use numeric prefixes (e.g., `01_base.py`, `02_advanced.py`).

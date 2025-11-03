@@ -16,15 +16,15 @@ PROTECTED_COMMANDS = {"add", "remove", "list", "ping", "greetings"}
 
 @command(
     name="remove",
-    description="Remove a dynamically added command (usage: /remove <command_name>)",
-    pattern=r"^/remove\s+(\w+)$"
+    description="Remove a dynamically added command (usage: !remove <command_name>)",
+    pattern=r"^!remove\s+(\w+)$"
 )
 async def remove_handler(body: str) -> Optional[str]:
     """Remove a command from the system."""
     # Parse command name
-    match = re.match(r"^/remove\s+(\w+)$", body.strip())
+    match = re.match(r"^!remove\s+(\w+)$", body.strip())
     if not match:
-        return "Usage: /remove <command_name>\nExample: /remove calculate"
+        return "Usage: !remove <command_name>\nExample: !remove calculate"
 
     command_name = match.group(1).lower()
 
@@ -35,7 +35,7 @@ async def remove_handler(body: str) -> Optional[str]:
     # Check if command exists
     registry = get_registry()
     if not registry.get_command(command_name):
-        return f"Command '{command_name}' not found. Use /list to see available commands."
+        return f"Command '{command_name}' not found. Use !list to see available commands."
 
     # Get file paths
     command_file = Path(f"bot/commands/{command_name}.py")

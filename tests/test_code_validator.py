@@ -13,12 +13,14 @@ from bot.commands import command
 @command(
     name="test",
     description="Test command",
-    pattern=r"^/test$"
+    pattern=r"^!test$"
 )
 async def test_handler(body: str) -> Optional[str]:
     return "test"
 '''
     is_valid, error = validate_command_code(code, "test")
+    if not is_valid:
+        print(f"Validation error: {error}")
     assert is_valid
     assert error is None
 

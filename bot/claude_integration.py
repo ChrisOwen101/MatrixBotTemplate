@@ -38,12 +38,12 @@ Requirements:
 3. Return a string response to send back to the user, or None if no response needed
 4. Keep responses under 4000 characters
 5. Include the @command decorator with appropriate pattern
-6. The pattern should match `/{command_name}` followed by any arguments
+6. The pattern should match `!{command_name}` followed by any arguments
 7. Include clear docstring explaining what the command does
 
 IMPORTANT:
 - Import `from typing import Optional` and `from bot.commands import command`
-- Use regex pattern like `r"^/{command_name}\\s*(.*)$"` to capture arguments
+- Use regex pattern like `r"^!{command_name}\\s*(.*)$"` to capture arguments
 - Handle edge cases gracefully with error messages
 - Keep the code simple and focused
 
@@ -56,7 +56,7 @@ from . import command
 @command(
     name="{command_name}",
     description="{command_description}",
-    pattern=r"^/{command_name}\\s*(.*)$"
+    pattern=r"^!{command_name}\\s*(.*)$"
 )
 async def {command_name}_handler(body: str) -> Optional[str]:
     \"\"\"Your docstring here.\"\"\"
@@ -169,6 +169,6 @@ from bot.commands.{command_name} import {command_name}_handler
 @pytest.mark.asyncio
 async def test_{command_name}_basic():
     \"\"\"Basic test for {command_name} command.\"\"\"
-    result = await {command_name}_handler("/{command_name} test")
+    result = await {command_name}_handler("!{command_name} test")
     assert result is not None
 """

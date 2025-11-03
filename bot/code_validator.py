@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 # Dangerous imports/modules that should not be used
 DANGEROUS_MODULES = {
     'os.system', 'subprocess', 'eval', 'exec', '__import__',
-    'open',  # File operations could be dangerous
+    'builtins.open', 'open',  # File operations could be dangerous
 }
 
 # Allowed safe modules
@@ -89,7 +89,8 @@ class CodeValidator:
         found_decorator = False
 
         for node in ast.walk(tree):
-            if isinstance(node, ast.FunctionDef):
+            # Check for both async and regular function definitions
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 if node.name == handler_name:
                     found_handler = True
                     # Check if it's async

@@ -11,4 +11,4 @@ from . import command
 )
 async def greeting_handler(body: str) -> Optional[str]:
     """Respond to simple greetings."""
-    return "Hello! I'm The Architect, a self-modifying Matrix bot. Use /list to see available commands."
+    return "Hello! I'm The Architect, a self-modifying Matrix bot. Use !list to see available commands."

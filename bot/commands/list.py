@@ -7,7 +7,7 @@ from . import command, get_registry
 @command(
     name="list",
     description="List all available commands",
-    pattern=r"^/list$"
+    pattern=r"^!list$"
 )
 async def list_handler(body: str) -> Optional[str]:
     """List all registered commands."""
@@ -20,6 +20,6 @@ async def list_handler(body: str) -> Optional[str]:
     # Format the list nicely
     lines = ["Available commands:"]
     for name, description in commands_list:
-        lines.append(f"  /{name} - {description}")
+        lines.append(f"  !{name} - {description}")
 
     return "\n".join(lines)

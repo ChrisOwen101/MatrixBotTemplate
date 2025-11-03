@@ -6,15 +6,14 @@ from bot.commands import CommandRegistry, command
 @pytest.mark.asyncio
 async def test_registry_registration():
     """Test basic command registration."""
-    registry = CommandRegistry()
+    from bot.commands import get_registry
 
-    @command(name="test", description="Test command", pattern=r"^test$")
-    async def test_handler(body: str):
-        return "test response"
+    # Get the global registry
+    registry = get_registry()
 
-    # Note: decorator automatically registers with global registry
-    # For isolated testing, we'd need to clear registry first
-    assert registry.get_command("test") is not None
+    # Commands loaded from bot/commands/ should already be registered
+    # Test that ping command exists
+    assert registry.get_command("ping") is not None
 
 
 @pytest.mark.asyncio

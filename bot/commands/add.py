@@ -15,15 +15,15 @@ logger = logging.getLogger(__name__)
 
 @command(
     name="add",
-    description="Add a new command using AI (usage: /add -n <name> -d \"<description>\")",
-    pattern=r"^/add\s+"
+    description="Add a new command using AI (usage: !add -n <name> -d \"<description>\")",
+    pattern=r"^!add\s+"
 )
 async def add_handler(body: str) -> Optional[str]:
     """
     Add a new command using Claude AI to generate the code.
 
-    Usage: /add -n <command_name> -d "<description>"
-    Example: /add -n calculate -d "Calculate mathematical expressions"
+    Usage: !add -n <command_name> -d "<description>"
+    Example: !add -n calculate -d "Calculate mathematical expressions"
     """
     # Parse arguments
     name_match = re.search(r'-n\s+(\w+)', body)
@@ -31,8 +31,8 @@ async def add_handler(body: str) -> Optional[str]:
 
     if not name_match or not desc_match:
         return (
-            "Usage: /add -n <command_name> -d \"<description>\"\n\n"
-            "Example: /add -n calculate -d \"Calculate mathematical expressions\"\n\n"
+            "Usage: !add -n <command_name> -d \"<description>\"\n\n"
+            "Example: !add -n calculate -d \"Calculate mathematical expressions\"\n\n"
             "The command name should be alphanumeric (no spaces).\n"
             "The description should be in quotes."
         )
@@ -47,7 +47,7 @@ async def add_handler(body: str) -> Optional[str]:
     # Check if command already exists
     command_file = Path(f"bot/commands/{command_name}.py")
     if command_file.exists():
-        return f"Command '{command_name}' already exists. Use /remove first if you want to replace it."
+        return f"Command '{command_name}' already exists. Use !remove first if you want to replace it."
 
     # Load config
     from ..config import load_config
