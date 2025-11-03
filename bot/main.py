@@ -5,7 +5,7 @@ import signal
 from nio import AsyncClient, AsyncClientConfig, RoomMessageText
 
 from .config import load_config
-from .handlers import on_message
+from .handlers import on_message, set_config
 
 logging.basicConfig(level=logging.INFO,
                     format="[%(levelname)s] %(name)s: %(message)s")
@@ -45,6 +45,7 @@ async def login_if_needed(client: AsyncClient, user_id: str, token: str | None):
 
 async def run():
     cfg = load_config()
+    set_config(cfg)  # Make config available to handlers
     client_cfg = AsyncClientConfig(store_sync_tokens=True)
     client = AsyncClient(cfg.homeserver, cfg.user_id,
                          device_id=cfg.device_id, config=client_cfg)

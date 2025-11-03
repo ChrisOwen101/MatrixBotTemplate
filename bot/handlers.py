@@ -4,24 +4,27 @@ import asyncio
 import logging
 import time
 
+from .commands import execute_command
+
 logger = logging.getLogger(__name__)
 
 # Record bot start time (ms) to filter historical events on first sync.
 START_TIME_MS = int(time.time() * 1000)
 HISTORICAL_SKEW_MS = 5000  # allow 5s clock skew / startup delay
 
-ALLOWED_ROOMS = ["!BHXRvKRXKeMuirqrlY:matrix.campaignlab.uk"]
+# Store config for use in handlers
+_config = None
+
+
+def set_config(config):
+    """Set the bot config for use in handlers."""
+    global _config
+    _config = config
 
 
 async def generate_reply(body: str) -> str | None:
-    """Very simple reply logic; extend with NLP or command parsing."""
-    body_lower = body.strip().lower()
-    if body_lower.startswith("!ping"):
-        return "pong"
-    if body_lower in {"hi", "hello", "hey"}:
-        return "Hello! I'm a Matrix bot."
-
-    return None
+    """Generate reply using the dynamic command registry."""
+    return await execute_command(body)
 
 
 def is_old_event(event) -> bool:
@@ -36,7 +39,9 @@ async def on_message(client: AsyncClient, room, event: RoomMessageText):
                      event.event_id, event.sender, room.room_id)
         return
 
-    if not room.room_id in ALLOWED_ROOMS:
+    # Check if room is allowed (if config has allowed_rooms list)
+    if _config and _config.allowed_rooms and room.room_id not in _config.allowed_rooms:
+        logger.debug("Ignoring message from non-allowed room: %s", room.room_id)
         return
 
     try:
