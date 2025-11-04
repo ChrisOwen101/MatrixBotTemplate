@@ -60,7 +60,8 @@ pytest tests/test_handlers.py -v
 
 **bot/handlers.py** - Message handling
 - `generate_reply(body)`: Now delegates to command registry via `execute_command()`
-- `on_message(client, room, event)`: Event handler that filters messages and sends replies
+- `on_message(client, room, event)`: Event handler that filters messages and sends replies as threaded messages
+- Threading: Uses `rel_type: "m.thread"` to create thread replies rooted at the original message, with `m.in_reply_to` fallback
 - Timestamp filtering: Ignores historical events with `server_timestamp < START_TIME_MS - HISTORICAL_SKEW_MS` (5s skew)
 - Room filtering: Uses `_config.allowed_rooms` from config.toml (set via `set_config()`)
 
@@ -110,6 +111,8 @@ pytest tests/test_handlers.py -v
 7. **Historical event filtering**: Uses bot start time (`START_TIME_MS`) to filter old messages during initial sync, preventing replies to historical messages.
 
 8. **Config-based room allowlist**: Room filtering now uses `allowed_rooms` from config.toml rather than hardcoded values.
+
+9. **Thread-based replies**: Bot replies are sent as threaded messages using Matrix's `m.thread` relation type. This keeps conversations organized in threads rather than as direct replies. The `m.in_reply_to` fallback is included for clients that don't support threads.
 
 ## Development Patterns
 
@@ -183,3 +186,5 @@ Add tests in `tests/commands/test_mycommand.py`. Restart bot to load.
 9. **API rate limits**: Claude API has rate limits. High-frequency `/add` usage could hit limits.
 
 10. **Command loading order**: Commands are loaded alphabetically by filename. If order matters, use numeric prefixes (e.g., `01_base.py`, `02_advanced.py`).
+
+11. **Thread-based replies**: All bot replies are sent as threaded messages using Matrix's threading feature. This means responses appear in a thread rooted at the user's original message. Commands should not override this behavior unless there's a specific reason to do so.

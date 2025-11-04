@@ -2,9 +2,8 @@ import pytest
 import re
 from typing import Optional
 
-# Assuming the command is in a module like 'commands.tldr_command'
-# Adjust the import path as needed for your project structure
-from commands.tldr_command import tldr_handler
+# Import the tldr handler from bot.commands.tldr
+from bot.commands.tldr import tldr_handler
 
 
 @pytest.mark.asyncio

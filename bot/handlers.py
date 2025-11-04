@@ -59,6 +59,9 @@ async def on_message(client: AsyncClient, room, event: RoomMessageText):
                 "msgtype": "m.text",
                 "body": reply,
                 "m.relates_to": {
+                    "rel_type": "m.thread",
+                    "event_id": event.event_id,
+                    "is_falling_back": True,
                     "m.in_reply_to": {"event_id": event.event_id}
                 },
             },
