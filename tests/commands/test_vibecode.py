@@ -3,48 +3,105 @@ from typing import Optional
 
 
 @pytest.mark.asyncio
-async def test_vibecode_hello_world():
-    from . import vibecode_handler
-    result = await vibecode_handler("!vibecode print hello world")
+async def test_vibecode_empty_command():
+    """Test vibecode with just the command and no description."""
+    from vibecode import vibecode_handler
+    
+    result = await vibecode_handler("!vibecode")
+    assert result == "Please provide a description of what you want the code to do. Usage: !vibecode <description>"
+
+
+@pytest.mark.asyncio
+async def test_vibecode_whitespace_only():
+    """Test vibecode with only whitespace after command."""
+    from vibecode import vibecode_handler
+    
+    result = await vibecode_handler("!vibecode   ")
+    assert result == "Please provide a description of what you want the code to do. Usage: !vibecode <description>"
+
+
+@pytest.mark.asyncio
+async def test_vibecode_invalid_pattern():
+    """Test vibecode with text that doesn't match the pattern."""
+    from vibecode import vibecode_handler
+    
+    result = await vibecode_handler("vibecode make a request")
+    assert result is None
+
+
+@pytest.mark.asyncio
+async def test_vibecode_http_get_request():
+    """Test vibecode for HTTP GET request."""
+    from vibecode import vibecode_handler
+    
+    result = await vibecode_handler("!vibecode make an http get request")
     assert result is not None
-    assert "Hello, World!" in result
+    assert "requests.get" in result
+    assert "```python" in result
+
+
+@pytest.mark.asyncio
+async def test_vibecode_http_post_request():
+    """Test vibecode for HTTP POST request."""
+    from vibecode import vibecode_handler
+    
+    result = await vibecode_handler("!vibecode make a post request to api")
+    assert result is not None
+    assert "requests.post" in result
     assert "```python" in result
 
 
 @pytest.mark.asyncio
 async def test_vibecode_read_file():
-    from . import vibecode_handler
-    result = await vibecode_handler("!vibecode read a file")
+    """Test vibecode for reading a file."""
+    from vibecode import vibecode_handler
+    
+    result = await vibecode_handler("!vibecode read file")
     assert result is not None
-    assert "open" in result
-    assert "read()" in result
+    assert "open(" in result
+    assert "'r'" in result
     assert "```python" in result
 
 
 @pytest.mark.asyncio
 async def test_vibecode_write_file():
-    from . import vibecode_handler
-    result = await vibecode_handler("!vibecode write to a file")
+    """Test vibecode for writing to a file."""
+    from vibecode import vibecode_handler
+    
+    result = await vibecode_handler("!vibecode write to file")
     assert result is not None
-    assert "open" in result
-    assert '"w"' in result
-    assert "write" in result
+    assert "open(" in result
+    assert "'w'" in result
     assert "```python" in result
 
 
 @pytest.mark.asyncio
-async def test_vibecode_http_request():
-    from . import vibecode_handler
-    result = await vibecode_handler("!vibecode make an http request")
+async def test_vibecode_parse_json():
+    """Test vibecode for parsing JSON."""
+    from vibecode import vibecode_handler
+    
+    result = await vibecode_handler("!vibecode parse json string")
     assert result is not None
-    assert "requests" in result
-    assert "get" in result
+    assert "json.loads" in result
+    assert "```python" in result
+
+
+@pytest.mark.asyncio
+async def test_vibecode_json_file():
+    """Test vibecode for loading JSON from file."""
+    from vibecode import vibecode_handler
+    
+    result = await vibecode_handler("!vibecode read json file")
+    assert result is not None
+    assert "json.load" in result
     assert "```python" in result
 
 
 @pytest.mark.asyncio
 async def test_vibecode_sort_list():
-    from . import vibecode_handler
+    """Test vibecode for sorting a list."""
+    from vibecode import vibecode_handler
+    
     result = await vibecode_handler("!vibecode sort a list")
     assert result is not None
     assert "sort()" in result
@@ -53,7 +110,9 @@ async def test_vibecode_sort_list():
 
 @pytest.mark.asyncio
 async def test_vibecode_reverse_list():
-    from . import vibecode_handler
+    """Test vibecode for reversing a list."""
+    from vibecode import vibecode_handler
+    
     result = await vibecode_handler("!vibecode reverse a list")
     assert result is not None
     assert "reverse()" in result
@@ -61,75 +120,32 @@ async def test_vibecode_reverse_list():
 
 
 @pytest.mark.asyncio
-async def test_vibecode_reverse_string():
-    from . import vibecode_handler
-    result = await vibecode_handler("!vibecode reverse a string")
+async def test_vibecode_split_string():
+    """Test vibecode for splitting a string."""
+    from vibecode import vibecode_handler
+    
+    result = await vibecode_handler("!vibecode split string")
     assert result is not None
-    assert "[::-1]" in result
+    assert "split()" in result
     assert "```python" in result
 
 
 @pytest.mark.asyncio
-async def test_vibecode_loop():
-    from . import vibecode_handler
-    result = await vibecode_handler("!vibecode create a loop")
+async def test_vibecode_join_list():
+    """Test vibecode for joining a list."""
+    from vibecode import vibecode_handler
+    
+    result = await vibecode_handler("!vibecode join list items")
     assert result is not None
-    assert "for" in result
-    assert "range" in result
-    assert "```python" in result
-
-
-@pytest.mark.asyncio
-async def test_vibecode_function():
-    from . import vibecode_handler
-    result = await vibecode_handler("!vibecode define a function")
-    assert result is not None
-    assert "def" in result
-    assert "```python" in result
-
-
-@pytest.mark.asyncio
-async def test_vibecode_class():
-    from . import vibecode_handler
-    result = await vibecode_handler("!vibecode create a class")
-    assert result is not None
-    assert "class" in result
-    assert "__init__" in result
-    assert "```python" in result
-
-
-@pytest.mark.asyncio
-async def test_vibecode_dictionary():
-    from . import vibecode_handler
-    result = await vibecode_handler("!vibecode work with a dictionary")
-    assert result is not None
-    assert "```python" in result
-    assert "{" in result and "}" in result
-
-
-@pytest.mark.asyncio
-async def test_vibecode_json_parse():
-    from . import vibecode_handler
-    result = await vibecode_handler("!vibecode parse json")
-    assert result is not None
-    assert "json" in result
-    assert "loads" in result
-    assert "```python" in result
-
-
-@pytest.mark.asyncio
-async def test_vibecode_json_dump():
-    from . import vibecode_handler
-    result = await vibecode_handler("!vibecode write json")
-    assert result is not None
-    assert "json" in result
-    assert "dumps" in result
+    assert "join(" in result
     assert "```python" in result
 
 
 @pytest.mark.asyncio
 async def test_vibecode_current_time():
-    from . import vibecode_handler
+    """Test vibecode for getting current time."""
+    from vibecode import vibecode_handler
+    
     result = await vibecode_handler("!vibecode get current time")
     assert result is not None
     assert "datetime" in result
@@ -138,95 +154,105 @@ async def test_vibecode_current_time():
 
 
 @pytest.mark.asyncio
+async def test_vibecode_web_scraping():
+    """Test vibecode for web scraping."""
+    from vibecode import vibecode_handler
+    
+    result = await vibecode_handler("!vibecode scrape a webpage")
+    assert result is not None
+    assert "BeautifulSoup" in result
+    assert "```python" in result
+
+
+@pytest.mark.asyncio
+async def test_vibecode_sqlite_query():
+    """Test vibecode for SQLite database query."""
+    from vibecode import vibecode_handler
+    
+    result = await vibecode_handler("!vibecode query sqlite database")
+    assert result is not None
+    assert "sqlite3" in result
+    assert "```python" in result
+
+
+@pytest.mark.asyncio
 async def test_vibecode_random_number():
-    from . import vibecode_handler
-    result = await vibecode_handler("!vibecode generate a random number")
+    """Test vibecode for generating random number."""
+    from vibecode import vibecode_handler
+    
+    result = await vibecode_handler("!vibecode generate random number")
     assert result is not None
     assert "random" in result
     assert "```python" in result
 
 
 @pytest.mark.asyncio
-async def test_vibecode_web_scraping():
-    from . import vibecode_handler
-    result = await vibecode_handler("!vibecode scrape a website")
+async def test_vibecode_random_choice():
+    """Test vibecode for random choice from list."""
+    from vibecode import vibecode_handler
+    
+    result = await vibecode_handler("!vibecode pick random choice from list")
     assert result is not None
-    assert "BeautifulSoup" in result
-    assert "requests" in result
+    assert "random.choice" in result
     assert "```python" in result
 
 
 @pytest.mark.asyncio
-async def test_vibecode_empty_description():
-    from . import vibecode_handler
-    result = await vibecode_handler("!vibecode")
+async def test_vibecode_sleep():
+    """Test vibecode for sleep/wait."""
+    from vibecode import vibecode_handler
+    
+    result = await vibecode_handler("!vibecode sleep for 1 second")
     assert result is not None
-    assert "Please provide a description" in result
-    assert "Usage:" in result
-
-
-@pytest.mark.asyncio
-async def test_vibecode_whitespace_only():
-    from . import vibecode_handler
-    result = await vibecode_handler("!vibecode   ")
-    assert result is not None
-    assert "Please provide a description" in result
-
-
-@pytest.mark.asyncio
-async def test_vibecode_unknown_request():
-    from . import vibecode_handler
-    result = await vibecode_handler("!vibecode do something very obscure and unrecognized")
-    assert result is not None
-    assert "need more specific details" in result
-    assert "Try describing" in result
-
-
-@pytest.mark.asyncio
-async def test_vibecode_case_insensitive():
-    from . import vibecode_handler
-    result = await vibecode_handler("!VIBECODE hello world")
-    assert result is not None
-    assert "Hello, World!" in result
-
-
-@pytest.mark.asyncio
-async def test_vibecode_multiline_description():
-    from . import vibecode_handler
-    result = await vibecode_handler("!vibecode create a function\nthat does something")
-    assert result is not None
-    assert "def" in result
-
-
-@pytest.mark.asyncio
-async def test_vibecode_api_request():
-    from . import vibecode_handler
-    result = await vibecode_handler("!vibecode fetch data from an api")
-    assert result is not None
-    assert "requests" in result
-    assert "get" in result
-
-
-@pytest.mark.asyncio
-async def test_vibecode_iterate():
-    from . import vibecode_handler
-    result = await vibecode_handler("!vibecode iterate over items")
-    assert result is not None
-    assert "for" in result
+    assert "time.sleep" in result
     assert "```python" in result
 
 
 @pytest.mark.asyncio
-async def test_vibecode_invalid_pattern():
-    from . import vibecode_handler
-    result = await vibecode_handler("not a vibecode command")
-    assert result is None
+async def test_vibecode_environment_variable():
+    """Test vibecode for getting environment variable."""
+    from vibecode import vibecode_handler
+    
+    result = await vibecode_handler("!vibecode get environment variable")
+    assert result is not None
+    assert "os.getenv" in result
+    assert "```python" in result
 
 
 @pytest.mark.asyncio
-async def test_vibecode_get_url():
-    from . import vibecode_handler
-    result = await vibecode_handler("!vibecode get url content")
+async def test_vibecode_command_line_args():
+    """Test vibecode for command line arguments."""
+    from vibecode import vibecode_handler
+    
+    result = await vibecode_handler("!vibecode parse command line arguments")
     assert result is not None
-    assert "requests" in result
-    assert "get" in result
+    assert "sys.argv" in result
+    assert "```python" in result
+
+
+@pytest.mark.asyncio
+async def test_vibecode_read_csv():
+    """Test vibecode for reading CSV file."""
+    from vibecode import vibecode_handler
+    
+    result = await vibecode_handler("!vibecode read csv file")
+    assert result is not None
+    assert "csv.reader" in result
+    assert "```python" in result
+
+
+@pytest.mark.asyncio
+async def test_vibecode_write_csv():
+    """Test vibecode for writing CSV file."""
+    from vibecode import vibecode_handler
+    
+    result = await vibecode_handler("!vibecode write csv file")
+    assert result is not None
+    assert "csv.writer" in result
+    assert "```python" in result
+
+
+@pytest.mark.asyncio
+async def test_vibecode_default_response():
+    """Test vibecode with unrecognized description."""
+    from vibecode import vibecode

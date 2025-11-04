@@ -9,86 +9,97 @@ from . import command
 )
 async def vibecode_handler(body: str) -> Optional[str]:
     """
-    Generate the smallest runnable code snippet for a described behavior.
+    Generate the smallest runnable code snippet that accomplishes the user's described behavior.
     
-    Usage: !vibecode <description of what the code should do>
-    
-    Returns a minimal, executable code snippet that accomplishes the requested task.
+    Args:
+        body: The full message text containing the command and description
+        
+    Returns:
+        A minimal, runnable code snippet or an error message
     """
     import re
     
-    match = re.match(r"^!vibecode\s*(.*)$", body.strip(), re.IGNORECASE | re.DOTALL)
+    match = re.match(r"^!vibecode\s*(.*)$", body, re.DOTALL)
     if not match:
         return None
     
     description = match.group(1).strip()
     
     if not description:
-        return "Please provide a description of what you want the code to do.\n\nUsage: !vibecode <description>"
+        return "Please provide a description of what you want the code to do. Usage: !vibecode <description>"
     
-    # Generate minimal code snippets based on common requests
-    description_lower = description.lower()
+    # Generate minimal code snippets based on common patterns
+    desc_lower = description.lower()
     
-    # Hello world variants
-    if "hello" in description_lower and "world" in description_lower:
-        return '```python\nprint("Hello, World!")\n```'
+    # HTTP request
+    if any(word in desc_lower for word in ["http", "api", "request", "get", "post", "fetch", "curl"]):
+        if "post" in desc_lower:
+            return "```python\nimport requests\nresponse = requests.post('URL', json={'key': 'value'})\nprint(response.json())\n```"
+        return "```python\nimport requests\nresponse = requests.get('URL')\nprint(response.json())\n```"
     
     # File operations
-    if "read" in description_lower and "file" in description_lower:
-        return '```python\nwith open("file.txt") as f:\n    content = f.read()\n```'
+    if any(word in desc_lower for word in ["read file", "open file", "read from file"]):
+        return "```python\nwith open('file.txt', 'r') as f:\n    data = f.read()\nprint(data)\n```"
     
-    if "write" in description_lower and "file" in description_lower:
-        return '```python\nwith open("file.txt", "w") as f:\n    f.write("content")\n```'
-    
-    # HTTP requests
-    if any(word in description_lower for word in ["http", "request", "api", "fetch", "get url"]):
-        return '```python\nimport requests\nr = requests.get("https://example.com")\nprint(r.text)\n```'
-    
-    # List/array operations
-    if "sort" in description_lower and ("list" in description_lower or "array" in description_lower):
-        return '```python\nlst = [3, 1, 4, 1, 5]\nlst.sort()\nprint(lst)\n```'
-    
-    if "reverse" in description_lower and ("list" in description_lower or "array" in description_lower):
-        return '```python\nlst = [1, 2, 3, 4, 5]\nlst.reverse()\nprint(lst)\n```'
-    
-    # String operations
-    if "reverse" in description_lower and "string" in description_lower:
-        return '```python\ns = "hello"\nprint(s[::-1])\n```'
-    
-    # Loop examples
-    if "loop" in description_lower or "iterate" in description_lower:
-        return '```python\nfor i in range(10):\n    print(i)\n```'
-    
-    # Function definition
-    if "function" in description_lower or "def" in description_lower:
-        return '```python\ndef func(x):\n    return x * 2\n```'
-    
-    # Class definition
-    if "class" in description_lower:
-        return '```python\nclass MyClass:\n    def __init__(self, value):\n        self.value = value\n```'
-    
-    # Dictionary operations
-    if "dictionary" in description_lower or "dict" in description_lower:
-        return '```python\nd = {"key": "value"}\nprint(d["key"])\n```'
+    if any(word in desc_lower for word in ["write file", "save to file", "write to file"]):
+        return "```python\nwith open('file.txt', 'w') as f:\n    f.write('content')\n```"
     
     # JSON operations
-    if "json" in description_lower and "parse" in description_lower:
-        return '```python\nimport json\ndata = json.loads(\'{"key": "value"}\')\n```'
+    if "parse json" in desc_lower or "load json" in desc_lower:
+        return "```python\nimport json\ndata = json.loads('{\"key\": \"value\"}')\nprint(data['key'])\n```"
     
-    if "json" in description_lower and ("write" in description_lower or "dump" in description_lower):
-        return '```python\nimport json\ndata = {"key": "value"}\nprint(json.dumps(data))\n```'
+    if "json" in desc_lower and "file" in desc_lower:
+        return "```python\nimport json\nwith open('data.json') as f:\n    data = json.load(f)\nprint(data)\n```"
+    
+    # List operations
+    if "sort" in desc_lower and "list" in desc_lower:
+        return "```python\nitems = [3, 1, 2]\nitems.sort()\nprint(items)\n```"
+    
+    if "reverse" in desc_lower and "list" in desc_lower:
+        return "```python\nitems = [1, 2, 3]\nitems.reverse()\nprint(items)\n```"
+    
+    # String operations
+    if "split string" in desc_lower:
+        return "```python\ntext = 'hello world'\nwords = text.split()\nprint(words)\n```"
+    
+    if "join" in desc_lower and ("list" in desc_lower or "array" in desc_lower):
+        return "```python\nitems = ['a', 'b', 'c']\nresult = ','.join(items)\nprint(result)\n```"
     
     # Date/time
-    if "current" in description_lower and ("time" in description_lower or "date" in description_lower):
-        return '```python\nfrom datetime import datetime\nprint(datetime.now())\n```'
-    
-    # Random number
-    if "random" in description_lower:
-        return '```python\nimport random\nprint(random.randint(1, 100))\n```'
+    if any(word in desc_lower for word in ["current time", "now", "timestamp", "current date"]):
+        return "```python\nfrom datetime import datetime\nprint(datetime.now())\n```"
     
     # Web scraping
-    if "scrape" in description_lower or "parse html" in description_lower:
-        return '```python\nfrom bs4 import BeautifulSoup\nimport requests\nhtml = requests.get("https://example.com").text\nsoup = BeautifulSoup(html, "html.parser")\n```'
+    if any(word in desc_lower for word in ["scrape", "parse html", "beautifulsoup"]):
+        return "```python\nfrom bs4 import BeautifulSoup\nimport requests\nhtml = requests.get('URL').text\nsoup = BeautifulSoup(html, 'html.parser')\nprint(soup.find('tag'))\n```"
+    
+    # Database
+    if "sqlite" in desc_lower or ("database" in desc_lower and "query" in desc_lower):
+        return "```python\nimport sqlite3\ncon = sqlite3.connect('db.sqlite')\ncur = con.cursor()\nresult = cur.execute('SELECT * FROM table').fetchall()\nprint(result)\n```"
+    
+    # Random
+    if "random" in desc_lower:
+        if "choice" in desc_lower or "pick" in desc_lower:
+            return "```python\nimport random\nitems = [1, 2, 3]\nprint(random.choice(items))\n```"
+        return "```python\nimport random\nprint(random.randint(1, 100))\n```"
+    
+    # Sleep/wait
+    if "sleep" in desc_lower or "wait" in desc_lower:
+        return "```python\nimport time\ntime.sleep(1)  # seconds\n```"
+    
+    # Environment variable
+    if "environment variable" in desc_lower or "env var" in desc_lower:
+        return "```python\nimport os\nvalue = os.getenv('VAR_NAME', 'default')\nprint(value)\n```"
+    
+    # Command line arguments
+    if "command line" in desc_lower or "argv" in desc_lower or "arguments" in desc_lower:
+        return "```python\nimport sys\nargs = sys.argv[1:]  # exclude script name\nprint(args)\n```"
+    
+    # CSV
+    if "csv" in desc_lower:
+        if "write" in desc_lower:
+            return "```python\nimport csv\nwith open('data.csv', 'w', newline='') as f:\n    writer = csv.writer(f)\n    writer.writerow(['col1', 'col2'])\n```"
+        return "```python\nimport csv\nwith open('data.csv') as f:\n    reader = csv.reader(f)\n    for row in reader:\n        print(row)\n```"
     
     # Default response
-    return f"I need more specific details to generate a code snippet for: '{description}'\n\nTry describing a specific programming task like:\n- read a file\n- make an HTTP request\n- sort a list\n- reverse a string"
+    return f"I'll create a minimal snippet for: {description}\n\n```python\n# {description}\npass  # Replace with your implementation\n```\n\nNote: Please be more specific about the task (e.g., 'read a file', 'make HTTP request', 'parse JSON') for a better snippet."
